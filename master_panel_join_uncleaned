@@ -1,0 +1,90 @@
+SELECT
+  COALESCE(a.Year, ac_agg.year, f.Year, d.Year, g_agg.year) AS Year,
+  a.FISA_Orders,
+  a.FISA_Targets,
+  a.Section702_Orders,
+  a.Section702_Targets,
+  a.USP_Query_Content,
+  a.USP_Query_NonContent,
+  a.USP_Query_FBI,
+  a.NSL_Requests AS ASTR_NSL_Requests,
+  ac_agg.distinct_disorder_types,
+  ac_agg.distinct_event_types,
+  ac_agg.distinct_sub_event_types,
+  ac_agg.distinct_actor1s,
+  ac_agg.distinct_assoc_actor_1s,
+  ac_agg.distinct_regions,
+  ac_agg.distinct_countries,
+  ac_agg.total_fatalities,
+  f.Applications_Received,
+  f.Orders_Granted,
+  f.Orders_Modified,
+  f.Orders_Denied_In_Part,
+  f.Applications_Denied_In_Full,
+  f.Amicus_Appointments,
+  f.Findings_1803i2A,
+  d.`NSL USP Requests Exluding Subscribers`,
+  d.`NSL USP Distinct Persons`,
+  d.`NSL NonUSP Requests Exluding Subscribers`,
+  d.`NSL NonUSP Distinct Persons`,
+  d.`NSL Subscriber Only Requests Total`,
+  d.`NSL Subsrciber Only Distinct Persons`,
+  g_agg.distinct_gdelt_actor1_codes,
+  g_agg.distinct_gdelt_actor1_names,
+  g_agg.distinct_gdelt_actor1_country_codes,
+  g_agg.distinct_gdelt_actor2_codes,
+  g_agg.distinct_gdelt_actor2_names,
+  g_agg.distinct_gdelt_actor2_country_codes,
+  g_agg.avg_gdelt_event_code,
+  g_agg.avg_gdelt_event_base_code,
+  g_agg.avg_gdelt_event_root_code,
+  g_agg.avg_gdelt_goldstein_scale,
+  g_agg.total_gdelt_num_mentions,
+  g_agg.avg_gdelt_avg_tone
+FROM
+  `coastal-volt-472401-e3`.astr_data.astr_data AS a
+  FULL JOIN
+  (
+    SELECT
+      year,
+      STRING_AGG(DISTINCT disorder_type, ', ') AS distinct_disorder_types,
+      STRING_AGG(DISTINCT event_type, ', ') AS distinct_event_types,
+      STRING_AGG(DISTINCT sub_event_type, ', ') AS distinct_sub_event_types,
+      STRING_AGG(DISTINCT actor1, ', ') AS distinct_actor1s,
+      STRING_AGG(DISTINCT assoc_actor_1, ', ') AS distinct_assoc_actor_1s,
+      STRING_AGG(DISTINCT region, ', ') AS distinct_regions,
+      STRING_AGG(DISTINCT country, ', ') AS distinct_countries,
+      SUM(fatalities) AS total_fatalities
+    FROM
+      `coastal-volt-472401-e3`.acled_data.acled_data
+    GROUP BY year
+  ) AS ac_agg
+  ON a.Year = ac_agg.year
+  FULL JOIN
+  `coastal-volt-472401-e3`.fisc_data.fisc_data AS f
+  ON COALESCE(a.Year, ac_agg.year) = f.Year
+  FULL JOIN
+  `coastal-volt-472401-e3`.doj_fisa_data.doj_fisa_data AS d
+  ON COALESCE(a.Year, ac_agg.year, f.Year) = d.Year
+  FULL JOIN
+  (
+    SELECT
+      int64_field_3 AS year,
+      STRING_AGG(DISTINCT string_field_5, ', ') AS distinct_gdelt_actor1_codes,
+      STRING_AGG(DISTINCT string_field_6, ', ') AS distinct_gdelt_actor1_names,
+      STRING_AGG(DISTINCT string_field_7, ', ') AS distinct_gdelt_actor1_country_codes,
+      STRING_AGG(DISTINCT string_field_12, ', ') AS distinct_gdelt_actor2_codes,
+      STRING_AGG(DISTINCT string_field_13, ', ') AS distinct_gdelt_actor2_names,
+      STRING_AGG(DISTINCT string_field_17, ', ') AS distinct_gdelt_actor2_country_codes,
+      AVG(int64_field_26) AS avg_gdelt_event_code,
+      AVG(int64_field_27) AS avg_gdelt_event_base_code,
+      AVG(int64_field_28) AS avg_gdelt_event_root_code,
+      AVG(double_field_30) AS avg_gdelt_goldstein_scale,
+      SUM(int64_field_31) AS total_gdelt_num_mentions,
+      AVG(double_field_34) AS avg_gdelt_avg_tone
+    FROM
+      `coastal-volt-472401-e3`.gedelt_data.gdelt_data
+    GROUP BY int64_field_3
+  ) AS g_agg
+  ON COALESCE(a.Year, ac_agg.year, f.Year, d.Year) = g_agg.year
+ORDER BY Year;
