@@ -18,6 +18,15 @@ COLUMNS_TO_TEST = [
     'ln_usp_fbi',
 ]
 
+COLUMNS_DIFF_TO_TEST = [
+    'd_ln_fisa_orders',
+    'd_ln_702_targets',
+    'd_ln_nsl_requests',
+    # add these if you created them:
+    # 'd_ln_usp_content',
+    # 'd_ln_usp_noncontent'
+]
+
 # --- BigQuery Data Loading ---
 def load_data_from_bigquery(project_id, dataset_id, table_id, columns):
     """Loads specified columns from a BigQuery table into a pandas DataFrame."""
@@ -104,5 +113,16 @@ def perform_adf_test(df, columns_to_test, alpha=0.05):
     return results
 
 # --- Run the pipeline ---
-df_ts = load_data_from_bigquery(PROJECT_ID, DATASET_ID, TABLE_ID, COLUMNS_TO_TEST)
-adf_results = perform_adf_test(df_ts, COLUMNS_TO_TEST)
+
+# 1) Load BOTH log-level and differenced columns into the DataFrame
+ALL_COLUMNS = COLUMNS_TO_TEST + COLUMNS_DIFF_TO_TEST
+df_ts = load_data_from_bigquery(PROJECT_ID, DATASET_ID, TABLE_ID, ALL_COLUMNS)
+
+# 2) ADF on log-level (already done, but we can keep this)
+print("=== ADF on log-level (log-transformed) series ===")
+adf_results_levels = perform_adf_test(df_ts, COLUMNS_TO_TEST)
+
+# 3) ADF on first differences of logs
+print("\n=== ADF on first-difference (d_ln_*) series ===")
+adf_results_diff = perform_adf_test(df_ts, COLUMNS_DIFF_TO_TEST)
+
