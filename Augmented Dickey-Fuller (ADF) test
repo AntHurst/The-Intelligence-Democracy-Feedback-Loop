@@ -1,0 +1,108 @@
+import pandas as pd
+from statsmodels.tsa.stattools import adfuller
+from google.cloud import bigquery
+
+# --- Configuration ---
+PROJECT_ID = 'coastal-volt-472401-e3'
+DATASET_ID = 'analysis_master_dataset'
+TABLE_ID = 'master_panel_ts'
+BIGQUERY_TABLE = f"`{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}`"
+
+# Columns to test for stationarity (use log variables from master_panel_ts)
+COLUMNS_TO_TEST = [
+    'ln_fisa_orders',
+    'ln_702_targets',
+    'ln_nsl_requests',
+    'ln_usp_content',
+    'ln_usp_noncontent',
+    'ln_usp_fbi',
+]
+
+# --- BigQuery Data Loading ---
+def load_data_from_bigquery(project_id, dataset_id, table_id, columns):
+    """Loads specified columns from a BigQuery table into a pandas DataFrame."""
+    client = bigquery.Client(project=project_id)
+    column_list_str = ", ".join([f"`{col}`" for col in columns])
+    query = f"""
+    SELECT
+        `Year`,
+        {column_list_str}
+    FROM
+        `{project_id}.{dataset_id}.{table_id}`
+    ORDER BY
+        `Year`;
+    """
+    print(f"Executing BigQuery query:\n{query}\n")
+    df = client.query(query).to_dataframe()
+    print(f"Successfully loaded {len(df)} rows from BigQuery.")
+    return df
+
+# --- ADF Test Function ---
+def perform_adf_test(df, columns_to_test, alpha=0.05):
+    """
+    Performs the Augmented Dickey-Fuller (ADF) test on specified columns of a DataFrame.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the time-series data.
+        columns_to_test (list): A list of column names to perform the ADF test on.
+        alpha (float): Significance level for stationarity decision (default 0.05).
+    """
+    if df is None or df.empty:
+        print("DataFrame is empty or None. Cannot perform ADF tests.")
+        return
+
+    print("\n--- Performing Augmented Dickey-Fuller (ADF) Tests ---")
+    print(f"Significance level (alpha): {alpha}")
+    print("------------------------------------------------------\n")
+
+    results = {}
+
+    for col in columns_to_test:
+        if col not in df.columns:
+            print(f"Warning: Column '{col}' not found in DataFrame. Skipping.\n")
+            results[col] = {'adf_statistic': None, 'p_value': None, 'stationarity': 'Column not found'}
+            continue
+
+        # Drop NaNs and ensure numeric dtype
+        series = pd.to_numeric(df[col], errors='coerce').dropna()
+
+        if series.empty:
+            print(f"Column '{col}' is empty after dropping NaNs. Skipping ADF test.\n")
+            results[col] = {'adf_statistic': None, 'p_value': None, 'stationarity': 'No data'}
+            continue
+
+        try:
+            # Perform the ADF test (using autolag='AIC' for small samples)
+            adf_result = adfuller(series, autolag='AIC')
+            adf_statistic = adf_result[0]
+            p_value = adf_result[1]
+            n_obs = adf_result[3]
+            critical_values = adf_result[4]
+
+            # Interpretation
+            stationarity = "Stationary" if p_value < alpha else "Non-Stationary"
+
+            results[col] = {
+                'adf_statistic': adf_statistic,
+                'p_value': p_value,
+                'n_obs': n_obs,
+                'critical_values': critical_values,
+                'stationarity': stationarity
+            }
+
+            print(f"ADF Test for {col}:")
+            print(f"  Test Statistic: {adf_statistic:.4f}")
+            print(f"  p-value: {p_value:.4f}")
+            print(f"  # of Observations: {n_obs}")
+            print(f"  Critical Values: {critical_values}")
+            print(f"  => Conclusion at alpha={alpha}: {stationarity}\n")
+
+        except Exception as e:
+            print(f"Error performing ADF test on column '{col}': {e}\n")
+            results[col] = {'adf_statistic': None, 'p_value': None, 'stationarity': f'Error: {e}'}
+
+    return results
+
+# --- Run the pipeline ---
+df_ts = load_data_from_bigquery(PROJECT_ID, DATASET_ID, TABLE_ID, COLUMNS_TO_TEST)
+adf_results = perform_adf_test(df_ts, COLUMNS_TO_TEST)
