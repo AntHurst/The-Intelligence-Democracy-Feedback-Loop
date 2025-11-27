@@ -1,0 +1,58 @@
+CREATE TABLE `coastal-volt-472401-e3`.analysis_master_dataset.master_panel_cleaned AS
+SELECT
+  master_panel.Year,
+  master_panel.FISA_Orders,
+  master_panel.FISA_Targets,
+  master_panel.Section702_Orders,
+  master_panel.Section702_Targets,
+  SAFE_CAST(`REPLACE`(
+    CASE
+      WHEN master_panel.USP_Query_Content = '—' THEN NULL
+      ELSE master_panel.USP_Query_Content
+    END, ',', '') AS INT64) AS USP_Query_Content_Cleaned,
+  SAFE_CAST(`REPLACE`(
+    CASE
+      WHEN master_panel.USP_Query_NonContent = '—' THEN NULL
+      ELSE master_panel.USP_Query_NonContent
+    END, ',', '') AS INT64) AS USP_Query_NonContent_Cleaned,
+  SAFE_CAST(`REPLACE`(
+    CASE
+      WHEN master_panel.USP_Query_FBI = '—' THEN NULL
+      ELSE master_panel.USP_Query_FBI
+    END, ',', '') AS INT64) AS USP_Query_FBI_Cleaned,
+  master_panel.ASTR_NSL_Requests,
+  master_panel.distinct_disorder_types,
+  master_panel.distinct_event_types,
+  master_panel.distinct_sub_event_types,
+  master_panel.distinct_actor1s,
+  master_panel.distinct_assoc_actor_1s,
+  master_panel.distinct_regions,
+  master_panel.distinct_countries,
+  master_panel.total_fatalities,
+  master_panel.Applications_Received,
+  master_panel.Orders_Granted,
+  master_panel.Orders_Modified,
+  master_panel.Orders_Denied_In_Part,
+  master_panel.Applications_Denied_In_Full,
+  master_panel.Amicus_Appointments,
+  master_panel.Findings_1803i2A,
+  master_panel.`NSL USP Requests Exluding Subscribers`,
+  master_panel.`NSL USP Distinct Persons`,
+  master_panel.`NSL NonUSP Requests Exluding Subscribers`,
+  master_panel.`NSL NonUSP Distinct Persons`,
+  master_panel.`NSL Subscriber Only Requests Total`,
+  master_panel.`NSL Subsrciber Only Distinct Persons`,
+  master_panel.distinct_gdelt_actor1_codes,
+  master_panel.distinct_gdelt_actor1_names,
+  master_panel.distinct_gdelt_actor1_country_codes,
+  master_panel.distinct_gdelt_actor2_codes,
+  master_panel.distinct_gdelt_actor2_names,
+  master_panel.distinct_gdelt_actor2_country_codes,
+  master_panel.avg_gdelt_event_code,
+  master_panel.avg_gdelt_event_base_code,
+  master_panel.avg_gdelt_event_root_code,
+  master_panel.avg_gdelt_goldstein_scale,
+  master_panel.total_gdelt_num_mentions,
+  master_panel.avg_gdelt_avg_tone
+FROM
+  `coastal-volt-472401-e3`.analysis_master_dataset.master_panel AS master_panel;
