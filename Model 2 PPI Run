@@ -1,0 +1,48 @@
+# --- Load updated table with politicization_index ---
+TABLE_ID = 'master_panel_ts'
+ALL_COLUMNS = COLUMNS_TO_TEST + COLUMNS_DIFF_TO_TEST + ['politicization_index']
+
+df_ts = load_data_from_bigquery(PROJECT_ID, DATASET_ID, TABLE_ID, ALL_COLUMNS)
+
+print(df_ts[['Year', 'politicization_index']])
+
+# ------------------------------------------------------
+#  MODEL 2: Δln(FISA) on lagged Δln(702) + lagged politicization
+# ------------------------------------------------------
+
+import numpy as np
+import statsmodels.api as sm
+import pandas as pd
+
+# 1) Build base modeling frame
+df_model2 = df_ts[['Year',
+                   'd_ln_fisa_orders',
+                   'd_ln_702_targets',
+                   'politicization_index']].dropna()
+
+# 2) Create lags
+df_model2['d_ln_702_targets_l1'] = df_model2['d_ln_702_targets'].shift(1)
+df_model2['politicization_index_l1'] = df_model2['politicization_index'].shift(1)
+
+# 3) Drop rows with NaNs created by lagging
+df_model2 = df_model2.dropna()
+
+# 4) Keep only the columns we actually regress on
+cols_to_use = ['d_ln_fisa_orders', 'd_ln_702_targets_l1', 'politicization_index_l1']
+df_model2 = df_model2[cols_to_use].copy()
+
+# 5) Force everything to float explicitly
+df_model2 = df_model2.astype(float)
+
+print("Column types after astype(float):\n", df_model2.dtypes)
+
+# 6) Define y and X as float arrays
+y2 = df_model2['d_ln_fisa_orders'].values.astype(float)
+X2 = df_model2[['d_ln_702_targets_l1', 'politicization_index_l1']].values.astype(float)
+
+# 7) Add constant AFTER converting to ndarray
+X2 = sm.add_constant(X2)
+
+# 8) Fit Model 2
+model2 = sm.OLS(y2, X2).fit()
+print(model2.summary())
