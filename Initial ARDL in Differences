@@ -1,0 +1,20 @@
+import statsmodels.api as sm
+
+# Select the key differenced variables
+df_model = df_ts[['Year', 'd_ln_fisa_orders', 'd_ln_702_targets', 'd_ln_nsl_requests']].dropna()
+
+# Create lagged values for ARDL(1,1,1)
+df_model['d_ln_fisa_orders_l1'] = df_model['d_ln_fisa_orders'].shift(1)
+df_model['d_ln_702_targets_l1'] = df_model['d_ln_702_targets'].shift(1)
+df_model['d_ln_nsl_requests_l1'] = df_model['d_ln_nsl_requests'].shift(1)
+
+df_model = df_model.dropna()
+
+# Define dependent and independent variables
+y = df_model['d_ln_fisa_orders']
+X = df_model[['d_ln_fisa_orders_l1', 'd_ln_702_targets_l1', 'd_ln_nsl_requests_l1']]
+X = sm.add_constant(X)
+
+# Fit ARDL-style OLS model
+model = sm.OLS(y, X).fit()
+print(model.summary())
