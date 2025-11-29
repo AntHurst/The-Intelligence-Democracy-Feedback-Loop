@@ -1,0 +1,24 @@
+# Build Model 3A dataframe
+df_model3a = df_ts[['Year',
+                    'd_ln_fisa_orders',
+                    'd_ln_702_targets',
+                    'd_ln_acled_fatalities']].dropna()
+
+# Create lags
+df_model3a['d_ln_702_targets_l1'] = df_model3a['d_ln_702_targets'].shift(1)
+df_model3a['d_ln_acled_fatalities_l1'] = df_model3a['d_ln_acled_fatalities'].shift(1)
+
+# Drop rows created by lagging
+df_model3a = df_model3a.dropna()
+
+# Keep only regression columns and coerce to float
+cols3a = ['d_ln_fisa_orders', 'd_ln_702_targets_l1', 'd_ln_acled_fatalities_l1']
+df_model3a = df_model3a[cols3a].astype(float)
+
+y3a = df_model3a['d_ln_fisa_orders'].values.astype(float)
+X3a = df_model3a[['d_ln_702_targets_l1', 'd_ln_acled_fatalities_l1']].values.astype(float)
+X3a = sm.add_constant(X3a)
+
+model3a = sm.OLS(y3a, X3a).fit()
+print("=== Model 3A: 702 + ACLED ===")
+print(model3a.summary())
