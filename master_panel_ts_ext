@@ -1,0 +1,30 @@
+WITH
+  acled_yearly AS (
+    SELECT
+      year AS Year,
+      SUM(fatalities) AS acled_fatalities
+    FROM
+      `coastal-volt-472401-e3`.acled_data.acled_data
+    GROUP BY year
+  ),
+  gdelt_yearly AS (
+    SELECT
+      int64_field_3 AS Year,
+      SUM(int64_field_31) AS gdelt_mentions
+    FROM
+      `coastal-volt-472401-e3`.gedelt_data.gdelt_data
+    GROUP BY int64_field_3
+  )
+SELECT
+  t.*,
+  a.acled_fatalities,
+  g.gdelt_mentions
+FROM
+  `coastal-volt-472401-e3`.analysis_master_dataset.master_panel_ts AS t
+  LEFT JOIN
+  acled_yearly AS a
+  USING(Year)
+  LEFT JOIN
+  gdelt_yearly AS g
+  USING(Year)
+ORDER BY Year;
