@@ -1,0 +1,9 @@
+# Sort by year just to be safe
+df_ts = df_ts.sort_values('Year')
+
+# Log(+1) transform to handle zeros, then first differences
+df_ts['ln_acled_fatalities'] = np.log(df_ts['acled_fatalities'] + 1)
+df_ts['d_ln_acled_fatalities'] = df_ts['ln_acled_fatalities'].diff()
+
+df_ts['ln_gdelt_mentions'] = np.log(df_ts['gdelt_mentions'] + 1)
+df_ts['d_ln_gdelt_mentions'] = df_ts['ln_gdelt_mentions'].diff()
