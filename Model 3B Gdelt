@@ -1,0 +1,21 @@
+# Build Model 3B dataframe
+df_model3b = df_ts[['Year',
+                    'd_ln_fisa_orders',
+                    'd_ln_702_targets',
+                    'd_ln_gdelt_mentions']].dropna()
+
+df_model3b['d_ln_702_targets_l1'] = df_model3b['d_ln_702_targets'].shift(1)
+df_model3b['d_ln_gdelt_mentions_l1'] = df_model3b['d_ln_gdelt_mentions'].shift(1)
+
+df_model3b = df_model3b.dropna()
+
+cols3b = ['d_ln_fisa_orders', 'd_ln_702_targets_l1', 'd_ln_gdelt_mentions_l1']
+df_model3b = df_model3b[cols3b].astype(float)
+
+y3b = df_model3b['d_ln_fisa_orders'].values.astype(float)
+X3b = df_model3b[['d_ln_702_targets_l1', 'd_ln_gdelt_mentions_l1']].values.astype(float)
+X3b = sm.add_constant(X3b)
+
+model3b = sm.OLS(y3b, X3b).fit()
+print("=== Model 3B: 702 + GDELT ===")
+print(model3b.summary())
